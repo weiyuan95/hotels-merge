@@ -9,6 +9,14 @@ In the project root:
 2. `npm run start` - the server is now started on `localhost:3000`. 
 
 ### Solution Design
+The core problem encountered in this scenario is that the data retrieval and processing is potentially slow and takes up a lot of memory in the system
+due to the large amount of data (all hotels in the world) that need to be processed. If the data retrieval and processing is done on a per-request basis, it can lead to
+very slow API response times and high server load since we will need to 
+1. Extract all data
+2. Find the right hotel(s) based on ID
+3. Merge the information
+
+An overview of the implemented solution:
 ```mermaid
 flowchart LR;
     Client -- query --> Server[Hotel API Server]
@@ -36,25 +44,25 @@ flowchart LR;
     HotelDataProcessor
     end
 ```
-An overview of the solution design:
-
-
-
-There are 2 jobs that power the backend:
+There are 2 cron jobs that power the backend:
 - `RetrieveSupplierData`,  which retrieves the data from all suppliers, cleans the data and stores them in their respective stores.
 - `ProcessSupplierData`, which retrieves the data from the supplier stores and processes (merges) them in the `ProcessedHotelDataStore`.
 
-Data from each supplier is cleaned and stored in their respective stores. These stores can either be in memory or persisted in a store like NoSQL databse or Redis depending
+The implemented design allows for the data retrieval and processing _to be a separate concern_ from the client requests.
+Data is retrieved and processed in the background, and the processed data is stored in a store (the `write`). When a client makes a request (the `read`), the necessary data is retrieved from the store and returned to the client.
+The key point to note is that the data _is not retrieved and processed on each request_, since the processed data is already in the `ProcessedHotelDataStore` and ready for use.
+
+Data from each supplier is cleaned and stored in their respective stores. These stores can either be in memory or persisted in a store like NoSQL database or Redis depending
 on the amount of data that needs to be handled. The exact store solution depends on the data: 
 - If the data is not expected to change, then using a database like Mongo would make sense since we are not dealing with relational data.
 - Redis would be a good choice if we need fast read/write speeds, and the data is expected to change frequently.
 - In memory is probably not possible, since we can have multiple suppliers providing data for the same hotel. When trying 
-  to merge data for _all_ hotels, that would be _a lot_ of data to store in memory. Processing them hotel by hotel would be more feasible.
+  to merge data for _all_ hotels, that would be _a lot_ of data to store in memory.
 
 With the stored supplier data, the hotels are then merged ID by ID based on all the available hotels across all the supplier stores. More information
 on how the data is merged is in the Data Selection section below.
 
-The motivation behind having 2 separate jobs is to separate the data retrieval from the data processing, allowing for each job to be scaled individually
+The motivation behind having 2 separate jobs is to separate the data retrieval from the data processing steps, allowing for each job to be scaled individually
 if necessary, and allowing for the job frequency to be tweaked. If necessary, the job for data retrieval can even be executed on a supplier level
 instead of grouping them together.
 
@@ -67,7 +75,7 @@ Data cleaning is handled in the different `*Supplier.ts` classes, depending on t
 - Whitespaces trimmed from all strings
 - Amenities are title-cased for better readability. For example, `free wifi` becomes `Free Wifi`. If necessary, words are changed
   to match how they are conventionally used. For example 'Tub' to 'Bathtub'
-- Latitudes and longitudes are converted to either a `number` or `null` if they are empty/not defined.
+- Latitudes and longitudes are converted to a `number`. If the field is empty/not defined, it will be `null` instead. 
 - Acme Supplier facilities are split up by case. For example 'BusinessCenter' becomes 'Business Center'
 - Country names are change from country code ('SG') to the fully qualified country name ('Singapore')
 
