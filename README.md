@@ -1,7 +1,12 @@
 ### Starting the app
+This app requires `npm` and `node` (v18^ <v19) to be installed. You can refer to
+https://docs.npmjs.com/downloading-and-installing-node-js-and-npm for installation instructions if you do not have them.
+
+If you have other applications open on port 3000, please close them before starting the server. If not, you'll need to change the port in `main.ts`.
+
 In the project root:
 1. `npm i`
-2. `npm run start` - the server is now started on `localhost:3000`
+2. `npm run start` - the server is now started on `localhost:3000`. 
 
 ### Solution Design
 ```mermaid

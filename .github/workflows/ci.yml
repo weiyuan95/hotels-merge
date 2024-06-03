@@ -17,3 +17,12 @@ jobs:
       - uses: actions/setup-node
       - run: npm install
       - run: npm run build
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout
+      - uses: actions/setup-node
+      - run: npm install
+      - run: npm run test
