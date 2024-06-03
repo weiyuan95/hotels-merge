@@ -1,4 +1,13 @@
-import { Controller, Get, NotFoundException, Param, ParseIntPipe, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  ParseArrayPipe,
+  ParseIntPipe,
+  Query,
+  UseInterceptors,
+} from '@nestjs/common';
 import { HotelService } from './HotelService';
 import { HotelData } from './stores/ProcessedHotelDataStore';
 import { CacheInterceptor } from '@nestjs/cache-manager';
@@ -9,15 +18,24 @@ import { CacheInterceptor } from '@nestjs/cache-manager';
 export class HotelController {
   constructor(private readonly hotelService: HotelService) {}
 
+  // It's not clear what the expected behaviour is when an ID isn't found, so we're just not returning anything
+  // for non-existent IDs
   @Get()
-  getHotels(): Promise<HotelData[]> {
-    return this.hotelService.getHotels();
+  async findHotelsByIds(
+    @Query('ids', new ParseArrayPipe({ items: String, separator: ',', optional: true }))
+    ids: string[]
+  ): Promise<HotelData[]> {
+    if (!ids) {
+      return this.hotelService.getHotels();
+    }
+
+    return this.hotelService.getHotelsByIds(ids);
   }
 
   @Get(':id')
   // No validation since not enough information is known about the id.
-  getHotelById(@Param('id') id: string): Promise<HotelData> {
-    const hotel = this.hotelService.getHotelById(id);
+  async getHotelById(@Param('id') id: string): Promise<HotelData> {
+    const hotel = await this.hotelService.getHotelById(id);
 
     if (!hotel) {
       throw new NotFoundException();

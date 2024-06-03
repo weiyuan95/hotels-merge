@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { HotelData, ProcessedHotelDataStore } from './stores/ProcessedHotelDataStore';
 
 @Injectable()
@@ -9,16 +9,23 @@ export class HotelService {
     return this.processedHotelDataStore.getAll();
   }
 
-  async getHotelById(id: string): Promise<HotelData> {
-    const hotel = this.processedHotelDataStore.get(id);
+  async getHotelById(id: string): Promise<HotelData | undefined> {
+    return this.processedHotelDataStore.get(id);
+  }
 
-    // Return 404 if the resource is not found - result can be changed depending on the API design.
-    // For example, we could return an application error code along with an error message.
-    if (!hotel) {
-      throw new NotFoundException();
+  async getHotelsByIds(ids: string[]): Promise<HotelData[]> {
+    const hotels: HotelData[] = [];
+
+    for (const id of ids) {
+      const hotel = await this.getHotelById(id);
+      // If nothing is found, we just ignore that particular ID since it's unclear what the
+      // behaviour should be.
+      if (hotel) {
+        hotels.push(hotel);
+      }
     }
 
-    return hotel;
+    return hotels;
   }
 
   async getHotelsByDestination(destinationId: number): Promise<HotelData[]> {
